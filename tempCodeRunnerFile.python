@@ -1,4 +1,0 @@
-import pandas as pd
-
-df = pd.read_excel("data/Danh_sach_gian_hang.xlsx", engine="openpyxl")
-print(df.head())
