@@ -1,16 +1,31 @@
-import pandas as pd
-import os
+import sqlite3
+from utils.excel_to_sql import sync_excel_to_sql
 
 class RAGService:
     def __init__(self):
-        path = os.path.join("data", "Danh_sach_gian_hang.xlsx")
-        self.df = pd.read_excel(path)
+        # Đồng bộ dữ liệu khi khởi tạo
+        sync_excel_to_sql(
+            excel_path="data/Danh_sach_gian_hang.xlsx",
+            db_path="data/database.db",
+            table_name="gian_hang"
+        )
+        self.db_path = "data/database.db"
 
-    def search_item(self, query: str) -> str:
-        matches = self.df[self.df["Tên sản phẩm"].str.contains(query, case=False, na=False)]
-        if matches.empty:
-            return "Không tìm thấy thông tin trong hệ thống RAG."
-        results = []
-        for _, row in matches.iterrows():
-            results.append(f"Sản phẩm: {row['Tên sản phẩm']} - Vị trí: {row['Gian hàng']}")
-        return "\n".join(results)
+    def query_item_location(self, item_name: str) -> str:
+        """Truy vấn vị trí món đồ từ database"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        query = """
+        SELECT * FROM gian_hang
+        WHERE ten_san_pham LIKE ?
+        LIMIT 1
+        """
+        cursor.execute(query, (f"%{item_name}%",))
+        row = cursor.fetchone()
+
+        conn.close()
+
+        if row:
+            return f"Món '{item_name}' nằm ở gian hàng số {row[1]}, khu vực {row[2]}"
+        return f"Không tìm thấy vị trí của món '{item_name}'."
